@@ -1,4 +1,4 @@
 playwright==1.49.0
 python-dotenv==1.0.1
-holidays>=0.60
+holidays>=0.101
 coverage>=7.6
