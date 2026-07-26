@@ -17,4 +17,4 @@ assignees: ""
 
 ## Safety considerations
 
-How should this preserve manual review before anything is submitted?
+How should this preserve manual review by default, and should it interact with explicit `--auto-submit` mode?

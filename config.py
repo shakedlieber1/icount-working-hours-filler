@@ -29,7 +29,7 @@ USER_DATA_DIR = ".auth"
 # Start time window (minutes from midnight). 08:00 = 480, 10:00 = 600.
 START_MIN_MINUTES = 8 * 60
 START_MAX_MINUTES = 10 * 60
-# Regular daily duration window (minutes). 9h = 540, 10h = 600. Floor 8h.
+# Regular daily duration window (minutes). 9h = 540, 11h = 660. Floor 8h.
 DURATION_MIN_MINUTES = 9 * 60
 DURATION_MAX_MINUTES = 11 * 60
 MIN_DURATION_MINUTES = 8 * 60  # hard floor enforced regardless of the above

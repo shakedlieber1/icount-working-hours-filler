@@ -1,0 +1,13 @@
+[run]
+source =
+    main
+    period
+    holiday_calendar
+
+[report]
+fail_under = 100
+show_missing = true
+skip_covered = true
+exclude_lines =
+    pragma: no cover
+    if TYPE_CHECKING:

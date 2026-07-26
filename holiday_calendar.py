@@ -69,7 +69,7 @@ def classify(
     return "work", None
 
 
-if __name__ == "__main__":
+if __name__ == "__main__":  # pragma: no cover
     import sys
 
     ref = _dt.date.fromisoformat(sys.argv[1]) if len(sys.argv) > 1 else _dt.date.today()

@@ -1,13 +1,13 @@
-"""Phase 2: fill working hours in icount, one day at a time, with approval.
+"""Phase 2: fill working hours in icount, one day at a time.
 
-For each work day (Sun-Thu) in the pay period it generates random hours
-(start 08:00-10:00, duration 9-10h, never below 8h), fills the day's time-in /
+For each work day (Sun-Thu) in the selected date range it generates random hours
+(start 08:00-10:00, duration 9-11h, never below 8h), fills the day's time-in /
 time-out fields in the visible browser, highlights them, then waits for you to
-press Enter in the terminal to submit that day before moving to the next.
+approve that day unless automatic submit mode is enabled.
 
-Run:  python main.py        # prompts for the month to fill
-      python main.py 6      # fills May 26 through June 25
-      python main.py 2026-06
+Run:  python main.py        # prompts for the date range, defaulting to current period
+      python main.py --start 2026-05-01 --end 2026-05-31
+      python main.py --auto-submit --start 2026-05-01 --end 2026-05-31
 """
 
 from __future__ import annotations
@@ -16,6 +16,7 @@ import datetime as _dt
 import os
 import random
 import sys
+from dataclasses import dataclass
 
 from dotenv import load_dotenv
 from playwright.sync_api import (
@@ -64,45 +65,74 @@ def _fmt(minutes: int) -> str:
 # ---------------------------------------------------------------------------
 # Period selection
 # ---------------------------------------------------------------------------
+@dataclass(frozen=True)
+class RunOptions:
+    start: _dt.date
+    end: _dt.date
+    auto_submit: bool = False
+
+
 def _usage() -> str:
-    return "Usage: python main.py [month|YYYY-MM]"
+    return "Usage: python main.py [--auto-submit] [--start YYYY-MM-DD --end YYYY-MM-DD]"
 
 
-def _selected_month_period(raw: str) -> tuple[_dt.date, _dt.date]:
-    month, year = period.parse_month_selection(raw)
-    return period.compute_period_for_month(month, year)
+def parse_run_options(argv: list[str]) -> RunOptions:
+    """Parse non-interactive run options from argv without the program name."""
+    args = list(argv)
+    auto_submit = False
+    if "--auto-submit" in args:
+        auto_submit = True
+        args.remove("--auto-submit")
+
+    start, end = period.parse_range_args(args)
+    return RunOptions(start=start, end=end, auto_submit=auto_submit)
 
 
 def choose_period(argv: list[str]) -> tuple[_dt.date, _dt.date]:
     """Resolve the fill period from CLI args or an interactive prompt."""
-    if len(argv) > 2:
-        print(_usage())
-        sys.exit(2)
-
-    if len(argv) == 2:
+    if len(argv) > 1:
         try:
-            return _selected_month_period(argv[1])
+            options = parse_run_options(argv[1:])
+            return options.start, options.end
         except ValueError as exc:
             print(f"Error: {exc}")
             print(_usage())
             sys.exit(2)
 
+    default_start, default_end = period.compute_period()
     while True:
-        raw = input(
-            "Which month should I fill? [1-12 or YYYY-MM, Enter=current period]: "
-        ).strip()
-        if not raw:
-            return period.compute_period()
+        print(
+            "Date range to fill "
+            f"[Enter={default_start.isoformat()} .. {default_end.isoformat()}]"
+        )
+        start_raw = input(f"  Start date ({period.DATE_FORMAT_HINT}): ").strip()
+        if not start_raw:
+            return default_start, default_end
+        end_raw = input(f"  End date ({period.DATE_FORMAT_HINT}): ").strip()
         try:
-            return _selected_month_period(raw)
+            return period.parse_range(start_raw, end_raw)
         except ValueError as exc:
             print(f"  {exc}")
+
+
+def choose_run_options(argv: list[str]) -> RunOptions:
+    """Resolve all run options from CLI args or an interactive date prompt."""
+    if len(argv) > 1:
+        try:
+            return parse_run_options(argv[1:])
+        except ValueError as exc:
+            print(f"Error: {exc}")
+            print(_usage())
+            sys.exit(2)
+
+    start, end = choose_period(argv)
+    return RunOptions(start=start, end=end)
 
 
 # ---------------------------------------------------------------------------
 # Login
 # ---------------------------------------------------------------------------
-def _fill_if_present(page: Page, selector: str, value: str) -> bool:
+def _fill_if_present(page: Page, selector: str, value: str) -> bool:  # pragma: no cover
     if not value:
         return False
     try:
@@ -114,7 +144,7 @@ def _fill_if_present(page: Page, selector: str, value: str) -> bool:
         return False
 
 
-def ensure_logged_in(page: Page) -> None:
+def ensure_logged_in(page: Page) -> None:  # pragma: no cover
     user = os.environ.get("ICOUNT_USER", "")
     passwd = os.environ.get("ICOUNT_PASS", "")
     company = os.environ.get("ICOUNT_COMPANY", "")
@@ -157,14 +187,14 @@ def ensure_logged_in(page: Page) -> None:
 # ---------------------------------------------------------------------------
 # Per-day fill (uses the page's own #punch_modal add-work-day flow)
 # ---------------------------------------------------------------------------
-def _highlight(loc: Locator) -> None:
+def _highlight(loc: Locator) -> None:  # pragma: no cover
     try:
         loc.evaluate("el => { el.style.outline = '3px solid orange'; el.scrollIntoView({block:'center'}); }")
     except Exception:  # noqa: BLE001
         pass
 
 
-def fill_day(page: Page, day: _dt.date, start_hhmm: str, end_hhmm: str) -> bool:
+def fill_day(page: Page, day: _dt.date, start_hhmm: str, end_hhmm: str) -> bool:  # pragma: no cover
     """Open the add-work-day modal for `day` and fill the time fields.
 
     Returns True if the modal is filled and ready to save.
@@ -209,7 +239,7 @@ def fill_day(page: Page, day: _dt.date, start_hhmm: str, end_hhmm: str) -> bool:
         return False
 
 
-def _close_modal(page: Page) -> None:
+def _close_modal(page: Page) -> None:  # pragma: no cover
     try:
         page.evaluate(
             "() => { if (window.jQuery) { jQuery('#punch_modal').modal('hide'); "
@@ -225,7 +255,7 @@ def _close_modal(page: Page) -> None:
         pass
 
 
-def fill_holiday(page: Page, day: _dt.date) -> bool:
+def fill_holiday(page: Page, day: _dt.date) -> bool:  # pragma: no cover
     """Open the absence modal and set it to a full-day holiday (יום חג)."""
     iso = day.isoformat()
     isr = day.strftime("%d/%m/%Y")
@@ -270,7 +300,7 @@ def fill_holiday(page: Page, day: _dt.date) -> bool:
         return False
 
 
-def submit_holiday(page: Page, day: _dt.date) -> None:
+def submit_holiday(page: Page, day: _dt.date) -> None:  # pragma: no cover
     try:
         page.locator(config.SELECTORS["special_day_save"]).first.click(timeout=8000)
         try:
@@ -283,7 +313,7 @@ def submit_holiday(page: Page, day: _dt.date) -> None:
         print("    Click שלח manually in the browser if needed.")
 
 
-def submit_day(page: Page, day: _dt.date) -> None:
+def submit_day(page: Page, day: _dt.date) -> None:  # pragma: no cover
     try:
         # Use the page's own save routine (posts the modal form via AJAX).
         page.evaluate(config.JS_SAVE_PUNCH)
@@ -307,11 +337,19 @@ def _fill_work_modal(page: Page, day: _dt.date, hours: tuple[str, str, int], tag
     return fill_day(page, day, start_hhmm, end_hhmm)
 
 
-def _handle_work(page: Page, day: _dt.date, label: str) -> str:
+def _handle_work(page: Page, day: _dt.date, label: str, auto_submit: bool = False) -> str:
     print(f"\n{label}  WORK")
     if not _fill_work_modal(page, day, regular_hours(), "hours"):
+        if auto_submit:
+            print("  Could not auto-fill; skipped.")
+            _close_modal(page)
+            return "continue"
         if input("  Could not auto-fill. [s]kip / [q]uit / Enter to retry: ").strip().lower() == "q":
             return "quit"
+        return "continue"
+    if auto_submit:
+        print("  Auto-submit enabled; saving.")
+        submit_day(page, day)
         return "continue"
     ans = input("  Review in the browser. [Enter]=submit, [s]=skip, [q]=quit: ").strip().lower()
     if ans == "q":
@@ -325,14 +363,28 @@ def _handle_work(page: Page, day: _dt.date, label: str) -> str:
     return "continue"
 
 
-def _handle_erev(page: Page, day: _dt.date, label: str, name: str) -> str:
+def _handle_erev(
+    page: Page,
+    day: _dt.date,
+    label: str,
+    name: str,
+    auto_submit: bool = False,
+) -> str:
     print(f"\n{label}  EREV {name} (half day)")
     if not _fill_work_modal(page, day, half_hours(), "half-day"):
+        if auto_submit:
+            print("  Could not auto-fill; skipped.")
+            _close_modal(page)
+            return "continue"
         if input("  Could not auto-fill. [s]kip / [q]uit / Enter to retry: ").strip().lower() == "q":
             return "quit"
         return "continue"
+    if auto_submit:
+        print("  Auto-submit enabled; saving half day.")
+        submit_day(page, day)
+        return "continue"
     ans = input(
-        "  [Enter]=submit half day, [f]=full 9-10h instead, [s]=skip, [q]=quit: "
+        "  [Enter]=submit half day, [f]=full 9-11h instead, [s]=skip, [q]=quit: "
     ).strip().lower()
     if ans == "q":
         _close_modal(page)
@@ -354,8 +406,22 @@ def _handle_erev(page: Page, day: _dt.date, label: str, name: str) -> str:
     return "continue"
 
 
-def _handle_holiday(page: Page, day: _dt.date, label: str, name: str) -> str:
+def _handle_holiday(
+    page: Page,
+    day: _dt.date,
+    label: str,
+    name: str,
+    auto_submit: bool = False,
+) -> str:
     print(f"\n{label}  HOLIDAY: {name}")
+    if auto_submit:
+        if not fill_holiday(page, day):
+            print("  Could not prepare holiday; skipped.")
+            _close_modal(page)
+            return "continue"
+        print("  Auto-submit enabled; reporting holiday.")
+        submit_holiday(page, day)
+        return "continue"
     ans = input(
         "  [Enter]=report as יום חג, [w]=work hours instead, [s]=skip, [q]=quit: "
     ).strip().lower()
@@ -388,19 +454,22 @@ def _handle_holiday(page: Page, day: _dt.date, label: str, name: str) -> str:
 # ---------------------------------------------------------------------------
 # Main loop
 # ---------------------------------------------------------------------------
-def main() -> None:
+def main() -> None:  # pragma: no cover
     load_dotenv()
     random.seed()
 
-    start, end = choose_period(sys.argv)
+    options = choose_run_options(sys.argv)
+    start, end = options.start, options.end
     days = period.target_dates(start, end)
 
     years = holiday_calendar.years_for(start, end)
     full_hols = holiday_calendar.full_holidays(years)
     erev_hols = holiday_calendar.erev_days(years)
 
-    print(f"Pay period: {start.isoformat()} .. {end.isoformat()}")
+    print(f"Date range: {start.isoformat()} .. {end.isoformat()}")
     print(f"Work days to fill (Sun-Thu): {len(days)}")
+    if options.auto_submit:
+        print("Auto-submit: enabled (days will be saved without per-day prompts)")
     n_hol = sum(1 for d in days if d in full_hols)
     n_erev = sum(1 for d in days if d not in full_hols and d in erev_hols)
     if n_hol or n_erev:
@@ -434,22 +503,23 @@ def main() -> None:
             label = f"[{i}/{len(days)}] {day.isoformat()} ({day.strftime('%a')})"
 
             if kind == "holiday":
-                action = _handle_holiday(page, day, label, name)
+                action = _handle_holiday(page, day, label, name, options.auto_submit)
             elif kind == "erev":
-                action = _handle_erev(page, day, label, name)
+                action = _handle_erev(page, day, label, name, options.auto_submit)
             else:
-                action = _handle_work(page, day, label)
+                action = _handle_work(page, day, label, options.auto_submit)
 
             if action == "quit":
                 print("Stopping.")
                 break
 
         print("\nDone. Closing browser.")
-        input("Press Enter to close the browser window... ")
+        if not options.auto_submit:
+            input("Press Enter to close the browser window... ")
         context.close()
 
 
-if __name__ == "__main__":
+if __name__ == "__main__":  # pragma: no cover
     try:
         main()
     except KeyboardInterrupt:

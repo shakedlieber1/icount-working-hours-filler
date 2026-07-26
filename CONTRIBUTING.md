@@ -6,7 +6,7 @@ Thanks for helping improve iCount Working-Hours Filler.
 
 - Keep user credentials, browser profiles, screenshots, and HTML dumps out of commits.
 - Prefer small, focused pull requests.
-- Preserve the manual review-before-submit workflow. The tool should not save work days without a user confirmation.
+- Preserve manual review as the default workflow. Automatic submission must stay behind the explicit `--auto-submit` flag.
 - Avoid logging secrets, cookies, session data, or full page HTML from authenticated iCount pages.
 
 ## Local Setup
@@ -22,13 +22,16 @@ Fill `.env` with your own iCount credentials before running the app locally.
 
 ## Development Checks
 
-Run a basic syntax check before opening a pull request:
+Run the unit tests and a basic syntax check before opening a pull request:
 
 ```bash
+.venv/bin/python -m unittest
+.venv/bin/python -m coverage run -m unittest
+.venv/bin/python -m coverage report
 .venv/bin/python -m compileall -q .
 ```
 
-If you changed browser automation behavior, manually test against a non-critical pay period and verify that every save still waits for explicit confirmation.
+If you changed browser automation behavior, manually test against a non-critical date range and verify that manual mode still waits for explicit confirmation. If you changed automatic submission, test `--auto-submit` against a safe range too.
 
 ## Pull Request Checklist
 

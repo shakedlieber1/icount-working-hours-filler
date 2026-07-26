@@ -1,7 +1,7 @@
-"""Pay-period date helpers.
+"""Pay-period and custom date-range helpers.
 
-The pay period runs from the 26th of the previous month through the 25th of
-the selected/current month.
+The default pay period runs from the 26th of the previous month through the
+25th of the current/next month. Public CLI input uses explicit ISO date ranges.
 """
 
 from __future__ import annotations
@@ -12,6 +12,7 @@ import config
 
 PERIOD_START_DAY = 26
 PERIOD_END_DAY = 25
+DATE_FORMAT_HINT = "YYYY-MM-DD"
 
 
 def compute_period(reference: _dt.date | None = None) -> tuple[_dt.date, _dt.date]:
@@ -34,41 +35,54 @@ def compute_period(reference: _dt.date | None = None) -> tuple[_dt.date, _dt.dat
     return start, end
 
 
-def compute_period_for_month(month: int, year: int | None = None) -> tuple[_dt.date, _dt.date]:
-    """Return the period ending on the 25th of `month`/`year`.
+def parse_date(value: str, label: str = "Date") -> _dt.date:
+    """Parse one ISO date, raising ValueError with a user-facing message."""
+    raw = value.strip()
+    if not raw:
+        raise ValueError(f"{label} cannot be blank.")
+    try:
+        return _dt.date.fromisoformat(raw)
+    except ValueError as exc:
+        raise ValueError(f"{label} must use {DATE_FORMAT_HINT}.") from exc
 
-    Example: month=6, year=2026 -> 2026-05-26 .. 2026-06-25.
-    If `year` is omitted, the current year is used.
-    """
-    _validate_month(month)
-    selected_year = year if year is not None else _dt.date.today().year
-    end = _dt.date(selected_year, month, PERIOD_END_DAY)
-    start = _sub_month(end).replace(day=PERIOD_START_DAY)
+
+def validate_range(start: _dt.date, end: _dt.date) -> tuple[_dt.date, _dt.date]:
+    """Validate and return an inclusive date range."""
+    if start > end:
+        raise ValueError("Start date must be on or before end date.")
     return start, end
 
 
-def parse_month_selection(value: str, default_year: int | None = None) -> tuple[int, int]:
-    """Parse `M`, `MM`, or `YYYY-MM` into (month, year)."""
-    raw = value.strip()
-    if not raw:
-        raise ValueError("Month cannot be blank.")
+def parse_range(start_value: str, end_value: str) -> tuple[_dt.date, _dt.date]:
+    """Parse and validate an inclusive ISO date range."""
+    start = parse_date(start_value, "Start date")
+    end = parse_date(end_value, "End date")
+    return validate_range(start, end)
 
-    year = default_year if default_year is not None else _dt.date.today().year
-    if "-" in raw:
-        parts = raw.split("-")
-        if len(parts) != 2 or len(parts[0]) != 4 or not all(p.isdigit() for p in parts):
-            raise ValueError("Use a month number like 6, or a year-month like 2026-06.")
-        year = int(parts[0])
-        month = int(parts[1])
-    elif raw.isdigit():
-        month = int(raw)
-    else:
-        raise ValueError("Use a month number like 6, or a year-month like 2026-06.")
 
-    _validate_month(month)
-    if year < 1:
-        raise ValueError("Year must be positive.")
-    return month, year
+def parse_range_args(argv: list[str]) -> tuple[_dt.date, _dt.date]:
+    """Parse CLI date-range args.
+
+    Accepts no args for the current default period, or exactly:
+    --start YYYY-MM-DD --end YYYY-MM-DD
+    """
+    if not argv:
+        return compute_period()
+    if len(argv) != 4:
+        raise ValueError("Use no arguments, or provide both --start and --end.")
+
+    values: dict[str, str] = {}
+    i = 0
+    while i < len(argv):
+        flag = argv[i]
+        if flag not in {"--start", "--end"}:
+            raise ValueError(f"Unknown argument: {flag}")
+        if flag in values:
+            raise ValueError(f"{flag} was provided more than once.")
+        values[flag] = argv[i + 1]
+        i += 2
+
+    return parse_range(values["--start"], values["--end"])
 
 
 def target_dates(start: _dt.date, end: _dt.date) -> list[_dt.date]:
@@ -83,11 +97,6 @@ def target_dates(start: _dt.date, end: _dt.date) -> list[_dt.date]:
     return days
 
 
-def _validate_month(month: int) -> None:
-    if not 1 <= month <= 12:
-        raise ValueError("Month must be a number from 1 to 12.")
-
-
 def _add_month(d: _dt.date) -> _dt.date:
     year = d.year + (1 if d.month == 12 else 0)
     month = 1 if d.month == 12 else d.month + 1
@@ -100,25 +109,17 @@ def _sub_month(d: _dt.date) -> _dt.date:
     return d.replace(year=year, month=month, day=1)
 
 
-if __name__ == "__main__":
+if __name__ == "__main__":  # pragma: no cover
     import sys
 
-    if len(sys.argv) > 2:
-        print("Usage: python period.py [month|YYYY-MM]")
+    try:
+        s, e = parse_range_args(sys.argv[1:])
+    except ValueError as exc:
+        print(f"Error: {exc}")
+        print("Usage: python period.py [--start YYYY-MM-DD --end YYYY-MM-DD]")
         sys.exit(2)
-
-    if len(sys.argv) == 2:
-        try:
-            selected_month, selected_year = parse_month_selection(sys.argv[1])
-            s, e = compute_period_for_month(selected_month, selected_year)
-        except ValueError as exc:
-            print(f"Error: {exc}")
-            print("Usage: python period.py [month|YYYY-MM]")
-            sys.exit(2)
-    else:
-        s, e = compute_period()
     days = target_dates(s, e)
-    print(f"Period: {s.isoformat()} .. {e.isoformat()}")
+    print(f"Date range: {s.isoformat()} .. {e.isoformat()}")
     print(f"Work days to fill ({len(days)}):")
     for d in days:
         print(f"  {d.isoformat()}  ({d.strftime('%a')})")
