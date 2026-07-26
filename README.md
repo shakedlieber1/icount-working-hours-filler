@@ -1,6 +1,7 @@
 # iCount Working-Hours Filler
 
 [![CI](https://github.com/shakedlieber1/icount-working-hours-filler/actions/workflows/ci.yml/badge.svg)](https://github.com/shakedlieber1/icount-working-hours-filler/actions/workflows/ci.yml)
+[![Latest release](https://img.shields.io/github/v/release/shakedlieber1/icount-working-hours-filler?sort=semver)](https://github.com/shakedlieber1/icount-working-hours-filler/releases)
 [![License: MIT](https://img.shields.io/badge/License-MIT-green.svg)](LICENSE)
 ![Python 3.12](https://img.shields.io/badge/Python-3.12-blue.svg)
 ![Manual approval by default](https://img.shields.io/badge/Saves-manual%20approval%20by%20default-0f766e.svg)
@@ -220,6 +221,18 @@ Run the 100% unit coverage check:
 .venv/bin/python -m coverage run -m unittest
 .venv/bin/python -m coverage report
 ```
+
+## Releases
+
+Releases are created automatically in GitHub from conventional commits on
+`main` or `master`.
+
+- `fix:` creates a patch release.
+- `feat:` creates a minor release.
+- Breaking changes create a major release.
+
+The project does not publish to PyPI or npm. Version history lives in GitHub
+Releases and tags.
 
 ## Troubleshooting
 

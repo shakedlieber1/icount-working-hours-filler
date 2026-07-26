@@ -1,0 +1,16 @@
+{
+  "name": "icount-working-hours-filler-release-tools",
+  "version": "0.0.0-development",
+  "private": true,
+  "description": "Release automation tooling for iCount Working-Hours Filler.",
+  "engines": {
+    "node": "^22.14.0 || >=24.10.0"
+  },
+  "scripts": {
+    "release": "semantic-release",
+    "release:dry-run": "semantic-release --dry-run"
+  },
+  "devDependencies": {
+    "semantic-release": "^25.0.8"
+  }
+}
