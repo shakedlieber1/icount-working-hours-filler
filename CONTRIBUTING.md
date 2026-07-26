@@ -33,6 +33,32 @@ Run the unit tests and a basic syntax check before opening a pull request:
 
 If you changed browser automation behavior, manually test against a non-critical date range and verify that manual mode still waits for explicit confirmation. If you changed automatic submission, test `--auto-submit` against a safe range too.
 
+## Commit Messages and Releases
+
+Releases are created automatically in GitHub from conventional commits merged
+to `main` or `master`. Version numbers follow
+[Semantic Versioning 2.0.0](https://semver.org/): incompatible API changes
+create MAJOR releases, backward-compatible functionality creates MINOR
+releases, and backward-compatible bug fixes create PATCH releases.
+
+- Use `fix:` for patch releases.
+- Use `feat:` for minor releases.
+- Use `BREAKING CHANGE:` in the commit body, or `!` in the commit type, for
+  major releases.
+
+Commits such as `docs:`, `test:`, `ci:`, and `chore:` do not create a release
+unless they include a breaking change.
+
+Name work branches with the same release intent when possible:
+
+- `feat/<short-topic>` for new backward-compatible functionality.
+- `fix/<short-topic>` for backward-compatible bug fixes.
+- `chore/<short-topic>`, `docs/<short-topic>`, `test/<short-topic>`, or
+  `ci/<short-topic>` for non-release maintenance work.
+
+Avoid vague branch names for new work. Clear branch names make release PRs and
+semantic-release history easier to audit.
+
 ## Pull Request Checklist
 
 - No credentials, cookies, browser profiles, screenshots, or discovery HTML are included.
