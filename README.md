@@ -1,5 +1,10 @@
 # iCount Working-Hours Filler
 
+[![CI](https://github.com/shakedlieber1/icount-working-hours-filler/actions/workflows/ci.yml/badge.svg)](https://github.com/shakedlieber1/icount-working-hours-filler/actions/workflows/ci.yml)
+[![License: MIT](https://img.shields.io/badge/License-MIT-green.svg)](LICENSE)
+![Python 3.12](https://img.shields.io/badge/Python-3.12-blue.svg)
+![Manual approval required](https://img.shields.io/badge/Saves-manual%20approval%20required-0f766e.svg)
+
 This is a small helper program that **fills in your monthly working hours on
 [app.icount.co.il](https://app.icount.co.il) for you**, automatically.
 
@@ -10,6 +15,8 @@ that day. Nothing is saved without your OK.
 > Use this only with your own iCount account and only where automated entry is
 > allowed by your workplace and the services you use.
 
+![Terminal approval flow](docs/assets/terminal-approval.svg)
+
 ---
 
 ## Project status
@@ -18,11 +25,39 @@ This is a personal automation helper, not an official iCount product. The iCount
 web interface can change without notice, so browser selectors may need updates
 over time.
 
+| Area | What to know |
+| --- | --- |
+| Platform | Built for local use with Python 3.12 and Playwright. |
+| Browser | Opens a visible Chromium window so you can review every action. |
+| Pay period | Fills the 26th of the previous month through the 25th of the selected month. |
+| Work week | Defaults to Sunday-Thursday. |
+| Safety | Requires your terminal approval before submitting each day. |
+| Holiday support | Detects Israeli public holidays and holiday eves offline. |
+
 Security-sensitive local files are intentionally ignored:
 
 - `.env` stores your private credentials.
 - `.auth/` stores the local browser profile/session.
 - `discovery_output/` may contain screenshots or HTML from authenticated pages.
+
+> [!IMPORTANT]
+> Do not commit real screenshots from your logged-in iCount account. The images
+> in this README are sanitized mockups with fake dates and fake hours.
+
+## What you will see
+
+The tool has two moving parts: a terminal prompt that asks what to do next, and
+a visible browser window where you review the filled fields before anything is
+submitted.
+
+| Terminal approval | Browser review |
+| --- | --- |
+| ![Terminal asks for approval before submitting](docs/assets/terminal-approval.svg) | ![Browser modal with fake filled work hours](docs/assets/browser-review.svg) |
+
+The pay period view is simple: work days are prepared, weekends are skipped, and
+holidays or holiday eves get special prompts.
+
+![Pay period overview with fake data](docs/assets/period-overview.svg)
 
 ## What it does, in plain words
 
@@ -39,6 +74,28 @@ Security-sensitive local files are intentionally ignored:
   a day or stop at any time.
 
 ---
+
+## Workflow
+
+```mermaid
+flowchart TD
+    A[Install dependencies] --> B[Create private .env file]
+    B --> C[Choose month or current pay period]
+    C --> D[Open visible browser]
+    D --> E[Fill one day with fake-looking realistic hours]
+    E --> F{Review in browser}
+    F -->|Enter| G[Submit day]
+    F -->|s| H[Skip day]
+    F -->|q| I[Stop safely]
+    G --> J{More days?}
+    H --> J
+    J -->|Yes| E
+    J -->|No| K[Close browser]
+```
+
+> [!NOTE]
+> The program does not check whether a day already has hours. If a day is
+> already filled in iCount, press `s` to skip it.
 
 ## Before you start (one-time checklist)
 
@@ -72,10 +129,18 @@ You need three things:
 Copy and paste these commands into Terminal **one block at a time**, pressing
 Enter after each.
 
+| Step | Command | Purpose |
+| --- | --- | --- |
+| 1 | `git clone ...` | Download the project. |
+| 2 | `python3.12 -m venv .venv` | Create a private Python workspace. |
+| 3 | `.venv/bin/python -m pip install -r requirements.txt` | Install Python packages. |
+| 4 | `.venv/bin/python -m playwright install chromium` | Install the browser used by Playwright. |
+| 5 | `cp .env.example .env` | Create your private credentials file. |
+
 1. Download the project and go into the folder:
 
    ```bash
-   git clone https://github.com/YOUR-USERNAME/icount-working-hours-filler.git
+   git clone https://github.com/shakedlieber1/icount-working-hours-filler.git
    cd icount-working-hours-filler
    ```
 
@@ -117,6 +182,10 @@ Enter after each.
 
 > Your login stays on your computer in the `.env` file and is never shared or
 > uploaded.
+
+> [!WARNING]
+> `.env` and `.auth/` are private local files. Keep them off GitHub and avoid
+> sharing them in support requests.
 
 ---
 
