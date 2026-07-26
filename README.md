@@ -225,7 +225,8 @@ Run the 100% unit coverage check:
 ## Releases
 
 Releases are created automatically in GitHub from conventional commits on
-`main` or `master`.
+`main` or `master`. Versions follow
+[Semantic Versioning 2.0.0](https://semver.org/).
 
 - `fix:` creates a patch release.
 - `feat:` creates a minor release.

@@ -28,6 +28,14 @@ test-results/
 docs/cursor-migration/
 AGENTS.md
 
+# Local AI agent and brainstorming artifacts
+.agents/
+.codex/
+docs/superpowers/
+*.chat.md
+*.prompt.md
+*.session.md
+
 # OS/editor noise
 .DS_Store
 .idea/
