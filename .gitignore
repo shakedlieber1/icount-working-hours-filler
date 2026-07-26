@@ -19,6 +19,9 @@ htmlcov/
 venv/
 env/
 
+# Node release tooling
+node_modules/
+
 # Generated discovery/browser artifacts
 discovery_output/
 playwright-report/

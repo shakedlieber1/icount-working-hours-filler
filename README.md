@@ -235,6 +235,12 @@ Releases are created automatically in GitHub from conventional commits on
 The project does not publish to PyPI or npm. Version history lives in GitHub
 Releases and tags.
 
+To preview the next release locally without publishing:
+
+```bash
+npm run release:dry-run
+```
+
 ## Troubleshooting
 
 **"Executable doesn't exist ... Please run: playwright install"**
