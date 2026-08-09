@@ -11,6 +11,6 @@
     "release:dry-run": "semantic-release --dry-run"
   },
   "devDependencies": {
-    "semantic-release": "^25.0.8"
+    "semantic-release": "^25.0.9"
   }
 }
